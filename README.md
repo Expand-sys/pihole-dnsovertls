@@ -1,5 +1,7 @@
 # pihole-dnsovertls
 
+install ansible on a linux machine(literally any with an internet connection)
+
 ```git clone https://github.com/Expand-sys/pihole-dnsovertls```
 
 ```cd pihole-dnsovertls```
