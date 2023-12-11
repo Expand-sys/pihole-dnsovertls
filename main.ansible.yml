@@ -1,0 +1,124 @@
+---
+- name: install and configure pihole and dns over tls
+  hosts: pihole
+  vars:
+  become: false
+  pre_tasks:
+    - name: Load variables
+      ansible.builtin.include_vars: '{{ item }}'
+      with_first_found:
+        - "vars/default.yml"
+  tasks:
+    - name: install python3 for certbot
+      ansible.builtin.apt:
+        pkg: 
+          - python3
+          - python3-pip
+          - libaugeas0
+          - nginx
+        state: present
+    
+    - name: install virtualenv via pip3
+      ansible.builtin.pip:
+        name: virtualenv
+        state: present
+
+    - name: install certbot via pip3
+      ansible.builtin.pip:
+        name: certbot
+        virtualenv: /opt/certbot/
+        state: present
+    
+    - name: stop lighttpd, so that certbot can run
+      ansible.builtin.systemd_service:
+        name: lighttpd
+        state: stopped
+
+    - name: stop nginx if running, so that certbot can run
+      ansible.builtin.systemd_service:
+        name: nginx
+        state: stopped
+
+
+    - name: link certbot to /usr/bin 
+      ansible.builtin.shell:
+        cmd: |
+          ln -s /opt/certbot/bin/certbot /usr/bin/certbot 
+        creates: /usr/bin/certbot
+
+    - name: run certbot cert grab
+      ansible.builtin.shell:
+        cmd: |
+          sudo certbot certonly --standalone -m "{{ DNSEMAIL }}" -d "{{ DNSDOMAIN }}" -n --agree-tos --no-eff-email --preferred-chain="ISRG Root X1"
+ 
+    
+    - name: configure nginx for streams
+      ansible.builtin.blockinfile:
+        content: |
+          stream {
+            include /etc/nginx/streams/*;
+          }
+        path: /etc/nginx/nginx.conf
+    - name: remove default site nginx
+      ansible.builtin.file:
+        state: absent
+        path: /etc/nginx/sites-enabled/default.conf
+    - name: create new config for pihol configuration
+      ansible.builtin.blockinfile:
+        content: |
+          server {
+            listen 80;
+            listen [::]:80;
+            root /var/www/html;
+            server_name {{ DNSDOMAIN }};
+            autoindex off;
+            index pihole/index.php index.php index.html index.htm;
+            location / {
+                    expires max;
+                    try_files $uri $uri/ =404;
+            }
+            location ~ \.php$ {
+                    include snippets/fastcgi-php.conf;
+                    fastcgi_pass unix:/run/php/php7.0-fpm.sock;
+            }
+            location /*.js {
+                    index pihole/index.js;
+            }
+            location /admin {
+                    root /var/www/html;
+                    index index.php index.html index.htm;
+            }
+            location ~ /\.ht {
+                    deny all;
+            }
+          }
+        path: /etc/nginx/sites-enabled/dnsovertls.conf
+        create: true
+
+    - name: configure nginx stream for android privatedns
+      ansible.builtin.blockinfile:
+        content: |
+          upstream dns-servers {
+            server    127.0.0.1:53;
+            server    [::1]:53;
+          }
+          server {
+            listen [::]:853 ssl;
+            listen 853 ssl; # managed by Certbot
+            ssl_certificate /etc/letsencrypt/live/{{ DNSDOMAIN }}/fullchain.pem; # managed by Certbot
+            ssl_certificate_key /etc/letsencrypt/live/{{ DNSDOMAIN }}/privkey.pem; # managed by Certbot
+            ssl_protocols        TLSv1.2 TLSv1.3;
+            ssl_ciphers          HIGH:!aNULL:!MD5;
+                  
+            ssl_handshake_timeout    10s;
+            ssl_session_cache        shared:SSL:20m;
+            ssl_session_timeout      4h;
+            proxy_pass dns-servers;
+          }
+        path: /etc/nginx/streams/dnsovertls.conf
+        create: true
+    - name: Start nginx
+      ansible.builtin.systemd_service:
+        name: nginx
+        state: started
+        enabled: true
