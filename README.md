@@ -2,6 +2,18 @@
 
 install ansible on a linux machine(literally any with an internet connection)
 
+your package manager will probably have a version
+apt install ansible
+
+yum install ansible
+
+dnf install ansible
+
+pacman -Syy ansible
+
+zypper in ansible
+
+if not follow this guide to install with pip
 https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html
 
 
