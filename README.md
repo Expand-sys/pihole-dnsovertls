@@ -3,6 +3,7 @@
 install ansible on a linux machine(literally any with an internet connection)
 
 your package manager will probably have a version
+
 apt install ansible
 
 yum install ansible
