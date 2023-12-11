@@ -2,6 +2,9 @@
 
 install ansible on a linux machine(literally any with an internet connection)
 
+https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html
+
+
 ```git clone https://github.com/Expand-sys/pihole-dnsovertls```
 
 ```cd pihole-dnsovertls```
