@@ -9,24 +9,46 @@
       with_first_found:
         - "vars/default.yml"
   tasks:
-    - name: install python3 for certbot
+    - name: install required dependencies
       ansible.builtin.apt:
         pkg: 
           - python3
           - python3-pip
           - libaugeas0
           - nginx
+          - libnginx-mod-stream
+        state: present
+
+
+    - name: install dependencies Debian 12
+      ansible.builtin.apt:
+        pkg:
+          - php-fpm
+          - php-cgi 
+          - php-xml 
+          - php-sqlite3 
+          - php-intl
+          - python3-virtualenv
+        state: present
+      when: ansible_distribution_major_version == "12"
+
+    - name: Install dependencies Debian 11 and below
+      ansible.builtin.apt:
+        pkg:
           - php7.4-fpm
           - php7.4-cgi 
           - php7.4-xml 
           - php7.4-sqlite3 
-          - php7.4-intl 
+          - php7.4-intl
         state: present
+      when: ansible_distribution_major_version < "12"
     
     - name: install virtualenv via pip3
       ansible.builtin.pip:
         name: virtualenv
         state: present
+      when: ansible_distribution_major_version < "12"
+
 
     - name: install certbot via pip3
       ansible.builtin.pip:
@@ -116,6 +138,51 @@
           }
         path: /etc/nginx/sites-enabled/dnsovertls.conf
         create: true
+    
+    - name: create new config for pihol configuration debian 12
+      ansible.builtin.blockinfile:
+        content: |
+          server {
+            listen 80;
+            listen 443 ssl;
+            listen [::]:80;
+            listen [::]:443 ssl;
+            ssl_certificate /etc/letsencrypt/live/{{ DNSDOMAIN }}/fullchain.pem; # managed by Certbot
+            ssl_certificate_key /etc/letsencrypt/live/{{ DNSDOMAIN }}/privkey.pem; # managed by Certbot
+            root /var/www/html;
+            server_name {{ DNSDOMAIN }};
+            autoindex off;
+
+            index pihole/index.php index.php index.html index.htm;
+
+            location / {
+              expires max;
+            }
+
+            location ~ \.php$ {
+                include fastcgi_params;
+                fastcgi_param SCRIPT_FILENAME $document_root/$fastcgi_script_name;
+                fastcgi_pass unix:/run/php/php7.4-fpm.sock;
+                fastcgi_param FQDN true;
+            }
+
+            location /*.js {
+                index pihole/index.js;
+            }
+
+            location /admin {
+                root /var/www/html;
+                index index.php index.html index.htm;
+            }
+
+            location ~ /\.ht {
+                deny all;
+            }
+          }
+        path: /etc/nginx/sites-enabled/dnsovertls.conf
+        create: true
+      when: ansible_distribution_major_version == "12"
+
 
     - name: configure nginx stream for android privatedns
       ansible.builtin.blockinfile:
@@ -146,6 +213,15 @@
         name: php7.4-fpm
         state: restarted
         enabled: true
+      when: ansible_distribution_major_version <  "12"
+
+    - name: Start nginx
+      ansible.builtin.systemd_service:
+        name: php8.2-fpm
+        state: restarted
+        enabled: true
+      when: ansible_distribution_major_version == "12"
+
     - name: Start nginx
       ansible.builtin.systemd_service:
         name: nginx
