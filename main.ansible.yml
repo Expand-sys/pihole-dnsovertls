@@ -62,10 +62,18 @@
         virtualenv: /opt/certbot/
         state: present
     
+    - name: Check if lighttpd is installed
+      ansible.builtin.stat:
+        path: /usr/sbin/lighttpd
+      register: lightinstalled
+
+
+
     - name: stop lighttpd, so that certbot can run
       ansible.builtin.systemd_service:
         name: lighttpd
         state: stopped
+      when: lightinstalled.stat.exists is true
     
     - name: stop nginx, so that certbot can run
       ansible.builtin.systemd_service:
@@ -227,3 +235,12 @@
         name: nginx
         state: restarted
         enabled: true
+    
+    - name: Add a cron job to run a script once a month
+      cron:
+        name: "Certbot Renew"
+        job: "sudo certbot certonly --standalone -m '{{ DNSEMAIL }}' -d '{{ DNSDOMAIN }}' -n --agree-tos --no-eff-email --preferred-chain='ISRG Root X1' && systemctl restart nginx"
+        user: "root"
+        minute: "0"
+        hour: "12"
+        day: "1"

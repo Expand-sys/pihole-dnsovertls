@@ -1,6 +1,6 @@
 pihole:
     hosts:
-        127.0.0.1: #change me to your caddy servers ip address or hostname
+        dns.expand.gay: #change me to your caddy servers ip address or hostname
     vars: 
         ansible_ssh_user: root #changing this will require changes to the playbook, currently the playbook must be run as root.
         ansible_ssh_common_args: '-o StrictHostKeyChecking=no' #This stops hostkey checking useful if like me you destroy vms and build new ones all the time
