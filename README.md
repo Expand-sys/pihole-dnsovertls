@@ -1,6 +1,6 @@
 # pihole-dnsovertls
 
-Needs to be run on a existing working pihole installation(BARE INSTALLATION, NOT A DOCKER) might make something that works with docker later but that would be a pain cause i would have to do some funky stuff
+Needs to be run on a existing working debain 11 or 12 pihole installation(BARE INSTALLATION, NOT A DOCKER) might make something that works with docker later but that would be a pain cause i would have to do some funky stuff
 
 install ansible on a linux machine(literally any with an internet connection)
 
