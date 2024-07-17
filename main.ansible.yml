@@ -89,7 +89,7 @@
     - name: run certbot cert grab
       ansible.builtin.shell:
         cmd: |
-          sudo certbot certonly --standalone -m "{{ DNSEMAIL }}" -d "{{ DNSDOMAIN }}" -n --agree-tos --no-eff-email --preferred-chain="ISRG Root X1"
+          sudo systemctl stop nginx && sudo certbot certonly --standalone -m "{{ DNSEMAIL }}" -d "{{ DNSDOMAIN }}" -n --agree-tos --no-eff-email --preferred-chain="ISRG Root X1"
  
     
     - name: configure nginx for streams
